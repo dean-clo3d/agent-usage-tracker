@@ -1,0 +1,20 @@
+# Build outputs — never commit binaries; colleagues should build from source.
+.build/
+.swiftpm/
+dist/
+*.app
+*.icns
+*.iconset/
+
+# macOS / editors
+.DS_Store
+*.xcodeproj/
+xcuserdata/
+.vscode/
+.idea/
+
+# Never commit credentials or local Claude data, even by accident.
+.credentials.json
+*.jsonl
+.env
+.env.*
