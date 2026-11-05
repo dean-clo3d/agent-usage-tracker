@@ -7,6 +7,7 @@ struct PanelView: View {
     let settings: AppSettings
     let updates: UpdateChecker
     @State private var showingSettings = false
+    @State private var contentHeight: CGFloat = 0
 
     static let width: CGFloat = 360
 
@@ -22,7 +23,9 @@ struct PanelView: View {
         }
         .padding(12)
         .frame(width: Self.width)
-        .background(WindowVisibilityObserver { store.setPanelVisible($0) })
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        .background(PanelWindowBridge(contentHeight: contentHeight) { store.setPanelVisible($0) })
     }
 
     private var header: some View {
@@ -214,24 +217,38 @@ private struct UpdateBanner: View {
     }
 }
 
-/// Reports when the hosting panel window opens/closes. MenuBarExtra's window becomes key
-/// when shown and resigns when dismissed; `onAppear` alone doesn't fire on every open.
-struct WindowVisibilityObserver: NSViewRepresentable {
+/// Reports when the hosting panel window opens/closes, and keeps the window exactly as tall as
+/// the panel. MenuBarExtra's window becomes key when shown and resigns when dismissed;
+/// `onAppear` alone doesn't fire on every open. Its own sizing is unreliable while the window is
+/// on screen: it can update the size constraints yet leave the frame at the old height, which
+/// clips taller content or centers shorter content below a gap.
+struct PanelWindowBridge: NSViewRepresentable {
+    let contentHeight: CGFloat
     let onChange: (Bool) -> Void
 
-    func makeNSView(context: Context) -> ObserverView {
-        let view = ObserverView()
+    func makeNSView(context: Context) -> BridgeView {
+        let view = BridgeView()
         view.onChange = onChange
         return view
     }
 
-    func updateNSView(_ nsView: ObserverView, context: Context) {
+    func updateNSView(_ nsView: BridgeView, context: Context) {
         nsView.onChange = onChange
+        nsView.fit(height: contentHeight)
     }
 
-    final class ObserverView: NSView {
+    final class BridgeView: NSView {
         var onChange: ((Bool) -> Void)?
         private var observers: [NSObjectProtocol] = []
+
+        /// Resizes around the top edge, which MenuBarExtra pins just under the status item.
+        func fit(height: CGFloat) {
+            guard let window, height > 0, abs(window.frame.height - height) > 0.5 else { return }
+            var frame = window.frame
+            frame.origin.y = frame.maxY - height
+            frame.size.height = height
+            window.setFrame(frame, display: true)
+        }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
