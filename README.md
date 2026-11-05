@@ -36,6 +36,16 @@ scripts/build-app.sh --install   # ~/Applications/Claude Usage.app 설치 후 �
 > 출처를 확인할 수 없는 바이너리는 같은 방식으로 토큰을 빼돌릴 수 있으므로, 코드를 확인하고 직접 빌드하는 것이 안전합니다.
 > (서명·공증된 배포가 필요하면 회사 Developer ID로 서명/notarize 하세요.)
 
+### 업데이트
+
+앱은 설치할 때 쓴 클론(`git clone`한 폴더)을 기억해 두고, 실행 15초 뒤와 이후 6시간마다 그 클론에서 `git fetch`로 새 커밋이 있는지 확인합니다.
+새 커밋이 있으면 알림을 한 번 보내고 패널 맨 위에 커밋 목록과 **변경 내역**(GitHub 비교 페이지) 링크, **업데이트** 버튼을 보여 줍니다.
+버튼을 누르면 같은 클론에서 `git pull --ff-only`와 `scripts/build-app.sh --install`을 실행하고, 빌드가 끝나면 새 앱이 자동으로 다시 열립니다. 로그는 `~/Library/Logs/Claude Usage/update.log`에 남습니다.
+
+- 클론에 커밋하지 않은 변경이 있거나 브랜치가 갈라졌다면 `--ff-only`가 실패합니다. 터미널에서 직접 정리한 뒤 `scripts/build-app.sh --install`을 실행하세요.
+- 설정(⚙︎) → 업데이트에서 확인을 끄거나 지금 확인할 수 있습니다.
+- `swift run`처럼 `build-app.sh`를 거치지 않은 빌드, git 클론이 아닌 곳에서 만든 빌드에는 이 기능이 없습니다.
+
 테스트: `scripts/test.sh`
 
 ### 빌드 문제 해결 (Xcode 없이 Command Line Tools만 있을 때)
@@ -75,6 +85,7 @@ scripts/build-app.sh --install   # ~/Applications/Claude Usage.app 설치 후 �
 | 화면 표시 | 서버·로그에서 온 문자열은 Markdown/링크로 해석하지 않고 그대로 표시 |
 | 외부 입력 | 열려 있는 포트, URL 스킴, XPC 없음 |
 | 바이너리 | Hardened Runtime으로 ad-hoc 서명 (디버거 attach 차단) |
+| 업데이트 확인 | 내 클론에서 `git fetch`만 실행. 앱이 별도 HTTP 요청을 보내지 않고 바이너리를 내려받지 않음. 설치 전에 커밋 목록을 확인할 수 있고, 설치는 버튼을 눌렀을 때만 내 클론에서 소스로 빌드 |
 
 ### 토큰을 다루는 코드 직접 확인하기
 
@@ -86,7 +97,7 @@ scripts/build-app.sh --install   # ~/Applications/Claude Usage.app 설치 후 �
 ```bash
 # 앱이 접속하거나 여는 URL 전체 — api.anthropic.com, claude.ai, 시스템 설정만 나와야 정상
 grep -rn 'URL(string' Sources
-# 외부 프로세스 실행 — /usr/bin/security 하나만 나와야 정상
+# 외부 프로세스 실행 — /usr/bin/security, /usr/bin/git(업데이트 확인), /bin/bash(업데이트 설치)만 나와야 정상
 grep -rn 'executableURL' Sources
 # 토큰 사용처 — UsageStore가 UsageAPI에 넘기는 한 줄과 UsageAPI.swift의 Authorization 헤더만 나와야 정상
 grep -rn 'accessToken' Sources/AgentUsage Sources/AgentUsageCore | grep -v 'CredentialStore.swift'
@@ -156,6 +167,7 @@ Sources/AgentUsageCore/   UI 없는 로직 (테스트 대상)
   Projection.swift        소진 시각 예측
   AlertPlanner.swift      알림 판정 (중복 방지)
   TipEngine.swift         상황별 · 일반 팁
+  SourceUpdate.swift      소스 기반 업데이트 확인 (git fetch)
 Sources/AgentUsage/       SwiftUI 메뉴 막대 앱
 scripts/build-app.sh      .app 번들 생성 · 서명 · 설치
 ```

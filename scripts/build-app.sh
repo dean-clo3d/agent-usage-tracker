@@ -44,6 +44,18 @@ ICONSET="$WORK/AppIcon.iconset"
 swift scripts/make-icon.swift "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
+# Lets the app find new commits in this clone and rebuild from it. Left out of
+# non-git checkouts, which turns update checks off.
+SOURCE_KEYS=""
+if COMMIT="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)"; then
+  UPSTREAM="$(git -C "$ROOT" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null || true)"
+  BRANCH="${UPSTREAM#*/}"
+  xml_escape() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+  SOURCE_KEYS="  <key>AgentUsageSourceRepo</key><string>$(printf '%s' "$ROOT" | xml_escape)</string>
+  <key>AgentUsageSourceCommit</key><string>$COMMIT</string>
+  <key>AgentUsageSourceBranch</key><string>$(printf '%s' "${BRANCH:-main}" | xml_escape)</string>"
+fi
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -61,6 +73,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
+$SOURCE_KEYS
 </dict>
 </plist>
 PLIST

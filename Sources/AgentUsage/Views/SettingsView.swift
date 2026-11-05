@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var settings: AppSettings
+    let updates: UpdateChecker
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var launchError: String?
     @State private var notificationsDenied = false
@@ -61,6 +62,22 @@ struct SettingsView: View {
                         if notificationsDenied {
                             Button("알림 권한 열기") { NotificationService.shared.openSystemSettings() }
                             Text("알림이 꺼져 있어요").font(.system(size: 11)).foregroundStyle(.orange)
+                        }
+                    }
+                    .controlSize(.small)
+                }
+            }
+
+            if updates.source != nil {
+                group("업데이트") {
+                    switchRow("새 버전 확인 (이 저장소의 git fetch)", isOn: $settings.checkForUpdates)
+                    HStack(spacing: 8) {
+                        Button("지금 확인") { Task { await updates.check() } }
+                            .disabled(updates.isChecking)
+                        if updates.isChecking { ProgressView().controlSize(.small) }
+                        if let checkedAt = updates.lastCheckedAt {
+                            Text(verbatim: "마지막 확인 \(checkedAt.formatted(date: .omitted, time: .shortened))")
+                                .font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                     }
                     .controlSize(.small)
