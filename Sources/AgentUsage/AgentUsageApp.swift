@@ -24,6 +24,7 @@ struct AgentUsageApp: App {
             MenuBarLabel(store: store, settings: settings)
         }
         .menuBarExtraStyle(.window)
+        .windowResizability(.contentSize)
     }
 }
 
