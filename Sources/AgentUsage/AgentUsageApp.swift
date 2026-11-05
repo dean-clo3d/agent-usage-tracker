@@ -7,19 +7,25 @@ struct AgentUsageApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var settings: AppSettings
     @State private var store: UsageStore
+    @State private var updates: UpdateChecker
 
     init() {
         let settings = AppSettings()
         let store = UsageStore(settings: settings)
+        let updates = UpdateChecker(settings: settings)
         _settings = State(initialValue: settings)
         _store = State(initialValue: store)
+        _updates = State(initialValue: updates)
         // Start polling at launch, not when the label first renders.
-        Task { @MainActor in store.start() }
+        Task { @MainActor in
+            store.start()
+            updates.start()
+        }
     }
 
     var body: some Scene {
         MenuBarExtra {
-            PanelView(store: store, settings: settings)
+            PanelView(store: store, settings: settings, updates: updates)
         } label: {
             MenuBarLabel(store: store, settings: settings)
         }

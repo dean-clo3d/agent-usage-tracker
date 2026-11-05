@@ -37,6 +37,7 @@ final class AppSettings {
     var watchSession: Bool { didSet { save() } }
     var watchWeekly: Bool { didSet { save() } }
     var watchScoped: Bool { didSet { save() } }
+    var checkForUpdates: Bool { didSet { save() } }
 
     @ObservationIgnored private let defaults: UserDefaults
 
@@ -53,6 +54,7 @@ final class AppSettings {
         watchSession = defaults.object(forKey: Keys.watchSession) as? Bool ?? true
         watchWeekly = defaults.object(forKey: Keys.watchWeekly) as? Bool ?? true
         watchScoped = defaults.object(forKey: Keys.watchScoped) as? Bool ?? true
+        checkForUpdates = defaults.object(forKey: Keys.checkForUpdates) as? Bool ?? true
     }
 
     var alertSettings: AlertSettings {
@@ -90,6 +92,7 @@ final class AppSettings {
         defaults.set(watchSession, forKey: Keys.watchSession)
         defaults.set(watchWeekly, forKey: Keys.watchWeekly)
         defaults.set(watchScoped, forKey: Keys.watchScoped)
+        defaults.set(checkForUpdates, forKey: Keys.checkForUpdates)
     }
 
     private enum Keys {
@@ -104,5 +107,6 @@ final class AppSettings {
         static let watchSession = "watchSession"
         static let watchWeekly = "watchWeekly"
         static let watchScoped = "watchScoped"
+        static let checkForUpdates = "checkForUpdates"
     }
 }

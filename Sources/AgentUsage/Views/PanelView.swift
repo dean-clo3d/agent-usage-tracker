@@ -5,6 +5,7 @@ import SwiftUI
 struct PanelView: View {
     let store: UsageStore
     let settings: AppSettings
+    let updates: UpdateChecker
     @State private var showingSettings = false
 
     static let width: CGFloat = 360
@@ -13,7 +14,7 @@ struct PanelView: View {
         VStack(spacing: 10) {
             header
             if showingSettings {
-                SettingsView(settings: settings)
+                SettingsView(settings: settings, updates: updates)
             } else {
                 content
             }
@@ -53,6 +54,10 @@ struct PanelView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
+            if let pending = updates.state.pending {
+                UpdateBanner(state: updates.state, pending: pending) { updates.install() }
+                Divider().padding(.horizontal, 12)
+            }
             if let error = store.error {
                 ErrorBanner(error: error)
                 if !store.limits.isEmpty { Divider().padding(.horizontal, 12) }
@@ -143,6 +148,65 @@ private struct ErrorBanner: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+    }
+}
+
+private struct UpdateBanner: View {
+    let state: UpdateState
+    let pending: PendingUpdate
+    let install: () -> Void
+
+    private var isInstalling: Bool {
+        if case .installing = state { return true }
+        return false
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "arrow.down.circle.fill")
+                .foregroundStyle(Color.accentColor)
+                .font(.system(size: 16))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(verbatim: "새 버전 (커밋 \(pending.commits.count)개)")
+                    .font(.system(size: 12, weight: .semibold))
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(pending.commits.prefix(3), id: \.sha) { commit in
+                        Text(verbatim: "· \(commit.subject)")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                if isInstalling {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("빌드 중… 끝나면 자동으로 다시 열려요")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    if case .installFailed(_, let message) = state {
+                        Text(message)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    HStack(spacing: 10) {
+                        if let url = pending.compareURL {
+                            Button("변경 내역") { NSWorkspace.shared.open(url) }
+                                .buttonStyle(.link)
+                        }
+                        Button("업데이트", action: install)
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .controlSize(.small)
+                    .font(.system(size: 11))
+                }
             }
             Spacer(minLength: 0)
         }
