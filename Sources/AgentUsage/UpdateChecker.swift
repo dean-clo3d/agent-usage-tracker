@@ -1,5 +1,5 @@
 import AgentUsageCore
-import Foundation
+import AppKit
 import Observation
 
 enum UpdateState: Equatable {
@@ -81,7 +81,12 @@ final class UpdateChecker {
         do {
             let process = try makeInstallProcess(source)
             process.terminationHandler = { [weak self] finished in
-                guard finished.terminationStatus != 0 else { return }
+                guard finished.terminationStatus != 0 else {
+                    // build-app.sh only stops the copy in ~/Applications. A copy running from
+                    // anywhere else (e.g. dist/) is still here, and the new one is already open.
+                    Task { @MainActor in NSApp.terminate(nil) }
+                    return
+                }
                 Task { @MainActor in
                     self?.state = .installFailed(pending, message: "업데이트에 실패했어요. 작업 폴더에 변경이 있거나 브랜치가 갈라졌다면 터미널에서 직접 업데이트하세요. 로그: ~/Library/Logs/Claude Usage/update.log")
                 }
