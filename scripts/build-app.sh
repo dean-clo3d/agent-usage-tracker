@@ -87,7 +87,9 @@ if [[ "${1:-}" == "--install" ]]; then
   DEST="$HOME/Applications"
   mkdir -p "$DEST"
   # Only stop the copy we're replacing, not any process that happens to share the name.
-  pkill -f "^$DEST/$APP_NAME.app/Contents/MacOS/AgentUsage" 2>/dev/null || true
+  # -a: the in-app updater runs this script as a child of the app, and pkill skips its own
+  # ancestors by default, which would leave the old copy running.
+  pkill -a -f "^$DEST/$APP_NAME.app/Contents/MacOS/AgentUsage" 2>/dev/null || true
   rm -rf "$DEST/$APP_NAME.app"
   cp -R "$APP" "$DEST/"
   open "$DEST/$APP_NAME.app"
